@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#07121b">
+    <title>Billiard Tetris Portal Puzzle</title>
+
+    <style>
+        :root {
+            --bg: #050b11;
+            --text: #eafcff;
+            --accent: #35e7ff;
+            --danger: #ff4267;
+            --gold: #ffd257;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 10%, #10324a 0%, #07131d 38%, #03070c 100%);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            position: fixed;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            width: 100vw;
+            height: 100dvh;
+            padding:
+                max(6px, env(safe-area-inset-top))
+                max(6px, env(safe-area-inset-right))
+                max(6px, env(safe-area-inset-bottom))
+                max(6px, env(safe-area-inset-left));
+            gap: 6px;
+        }
+
+        #header {
+            width: min(100vw, 620px);
+            min-height: 52px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto auto;
+            gap: 6px;
+            align-items: stretch;
+            z-index: 10;
+        }
+
+        .stat-box {
+            border: 1px solid rgba(105, 232, 255, 0.28);
+            border-radius: 10px;
+            background: linear-gradient(160deg, rgba(20, 62, 80, 0.92), rgba(7, 23, 34, 0.96));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+            padding: 5px 7px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            letter-spacing: 1px;
+            color: #8ab7c4;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            margin-top: 1px;
+            font-size: 17px;
+            font-weight: bold;
+            color: #f2fdff;
+            text-shadow: 0 0 8px rgba(67, 227, 255, 0.4);
+        }
+
+        .header-button {
+            border: 1px solid rgba(105, 232, 255, 0.45);
+            border-radius: 10px;
+            background: linear-gradient(180deg, rgba(20, 62, 80, 0.95), rgba(7, 23, 34, 0.98));
+            color: #d9fbff;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 0 10px;
+            min-width: 44px;
+            cursor: pointer;
+            transition: transform 0.08s ease, background 0.15s ease;
+        }
+
+        .header-button:active {
+            transform: scale(0.95);
+            background: rgba(35, 215, 255, 0.22);
+        }
+
+        #game-container {
+            position: relative;
+            flex: 1;
+            width: min(100vw, 620px);
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(84, 233, 255, 0.55);
+            border-radius: 16px;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 35%, rgba(20, 90, 105, 0.55) 0%, rgba(6, 20, 28, 0.98) 75%);
+            box-shadow:
+                0 0 0 2px rgba(1, 8, 13, 0.9),
+                0 0 22px rgba(35, 215, 255, 0.16),
+                inset 0 0 28px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+        }
+
+        #footer {
+            width: min(100vw, 620px);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            border-radius: 10px;
+            border: 1px solid rgba(83, 176, 197, 0.2);
+            background: rgba(4, 15, 24, 0.72);
+            color: #b8dce5;
+            padding: 6px 8px;
+            text-align: center;
+            font-size: 10px;
+            line-height: 1.25;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .hint-title {
+            font-size: 9px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #35e7ff;
+        }
+
+        .hint-text {
+            max-width: 580px;
+        }
+
+        .highlight {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        #settings-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(2, 7, 12, 0.82);
+            z-index: 100;
+            padding: 16px;
+        }
+
+        #settings-overlay.open {
+            display: flex;
+        }
+
+        #settings-panel {
+            width: min(100%, 340px);
+            border: 1px solid rgba(105, 232, 255, 0.4);
+            border-radius: 14px;
+            background: linear-gradient(160deg, rgba(15, 45, 60, 0.98), rgba(5, 16, 24, 0.99));
+            box-shadow: 0 0 28px rgba(35, 215, 255, 0.18);
+            padding: 14px;
+        }
+
+        .settings-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #eafcff;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .setting-row {
+            display: grid;
+            grid-template-columns: 1fr 86px;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 9px;
+        }
+
+        .setting-label {
+            font-size: 11px;
+            color: #b8dce5;
+        }
+
+        .setting-input {
+            width: 100%;
+            border: 1px solid rgba(105, 232, 255, 0.35);
+            border-radius: 8px;
+            background: rgba(3, 12, 18, 0.9);
+            color: #eafcff;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 7px 8px;
+            text-align: center;
+            outline: none;
+        }
+
+        .settings-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .settings-button {
+            border-radius: 10px;
+            border: 1px solid rgba(105, 232, 255, 0.45);
+            background: rgba(8, 28, 38, 0.95);
+            color: #d9fbff;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 9px 0;
+            cursor: pointer;
+        }
+
+        .settings-button.primary {
+            border-color: rgba(83, 237, 154, 0.6);
+            color: #c9ffdf;
+        }
+
+        .settings-button:active {
+            transform: scale(0.97);
+        }
+
+        @media (max-height: 620px) {
+            body {
+                gap: 4px;
+            }
+
+            #header {
+                min-height: 44px;
+            }
+
+            .stat-value {
+                font-size: 14px;
+            }
+
+            .stat-label {
+                font-size: 8px;
+            }
+
+            #footer {
+                font-size: 9px;
+                padding: 4px 6px;
+            }
+
+            .hint-title {
+                font-size: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        <div class="stat-box">
+            <div class="stat-label">Очки</div>
+            <div id="score" class="stat-value">0</div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Ходы</div>
+            <div id="moves" class="stat-value">12</div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-label">Линии</div>
+            <div id="lines" class="stat-value">0 / 2</div>
+        </div>
+
+        <button id="btn-settings" class="header-button">⚙</button>
+        <button id="btn-restart" class="header-button">Заново</button>
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div id="footer">
+        <div class="hint-title">Как играть</div>
+        <div class="hint-text">
+            Линия собирается из 10 клеток. Чтобы запустить мяч оттягивай палец в любом месте на поле. Собери
+            <span id="target-text">2 линии</span> за
+            <span id="moves-hint">12</span> ходов. Лузы это порталы.
+        </div>
+    </div>
+
+    <div id="settings-overlay">
+        <div id="settings-panel">
+            <div class="settings-title">настройки</div>
+
+            <div class="setting-row">
+                <div class="setting-label">количество ходов</div>
+                <input id="setting-moves" class="setting-input" type="number" min="5" max="30" value="12">
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-label">сколько линий собрать</div>
+                <input id="setting-lines" class="setting-input" type="number" min="1" max="5" value="2">
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-label">клеток по ширине</div>
+                <input id="setting-cols" class="setting-input" type="number" min="6" max="14" value="10">
+            </div>
+
+            <div class="setting-row">
+                <div class="setting-label">клеток по высоте</div>
+                <input id="setting-rows" class="setting-input" type="number" min="12" max="24" value="18">
+            </div>
+
+            <div class="settings-buttons">
+                <button id="settings-cancel" class="settings-button">отмена</button>
+                <button id="settings-apply" class="settings-button primary">применить</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let COLS = 10;
+let ROWS = 18;
+let CELL_SIZE = 32;
+const BOARD_PADDING = 14;
+
+let BOARD_WIDTH = COLS * CELL_SIZE;
+let BOARD_HEIGHT = ROWS * CELL_SIZE;
+
+let TARGET_LINES = 2;
+let START_MOVES = 12;
+const CANCEL_RADIUS = 40;
+
+const SHAPE_COLORS = {
+    'I': '#32e8ff',
+    'L': '#ff9d45',
+    'O': '#b26cff',
+    'Z': '#ff4d69',
+    'T': '#ff5aa8'
+};
+
+const SPAWN_QUEUE = ['I', 'T', 'O', 'L', 'Z', 'I', 'O', 'T', 'L', 'Z', 'I', 'O', 'T', 'L', 'Z'];
+let queueIndex = 0;
+
+let score = 0;
+let movesLeft = START_MOVES;
+let linesCleared = 0;
+let gameOver = false;
+let gameWon = false;
+
+let grid = [];
+let shapes = [];
+let cueBall = { x: 0, y: 0, vx: 0, vy: 0, radius: 0, isMoving: false };
+
+let touchStart = null;
+let touchCurrent = null;
+let isDragging = false;
+
+let particles = [];
+let animators = [];
+
+const TETRINOES = {
+    'I': [[0, -1], [0, 0], [0, 1], [0, 2]],
+    'L': [[0, -1], [0, 0], [0, 1], [1, 1]],
+    'O': [[0, 0], [1, 0], [0, 1], [1, 1]],
+    'Z': [[-1, 0], [0, 0], [0, 1], [1, 1]],
+    'T': [[-1, 0], [0, 0], [1, 0], [0, 1]]
+};
+
+let pockets = [];
+
+class Shape {
+    constructor(type, cx, cy) {
+        this.type = type;
+        this.cx = cx;
+        this.cy = cy;
+        this.blocks = TETRINOES[type].map(b => [...b]);
+        this.color = SHAPE_COLORS[type];
+        this.visualX = cx;
+        this.visualY = cy;
+        this.scaleX = 1;
+        this.scaleY = 1;
+    }
+
+    getGridBlocks(cx = this.cx, cy = this.cy, blocks = this.blocks) {
+        return blocks.map(b => ({ x: cx + b[0], y: cy + b[1] }));
+    }
+
+    rotate90(rotSign = 1) {
+        if (this.type === 'O') return;
+        this.blocks = this.blocks.map(b => {
+            return rotSign > 0 ? [-b[1], b[0]] : [b[1], -b[0]];
+        });
+    }
+
+    getRotatedBlocks(rotSign = 1) {
+        if (this.type === 'O') return this.blocks.map(b => [...b]);
+        return this.blocks.map(b => {
+            return rotSign > 0 ? [-b[1], b[0]] : [b[1], -b[0]];
+        });
+    }
+}
+
+function resizeCanvas() {
+    const container = document.getElementById('game-container');
+    const maxWidth = container.clientWidth;
+    const maxHeight = container.clientHeight;
+
+    let size = Math.floor(Math.min(
+        (maxWidth - BOARD_PADDING * 2) / COLS,
+        (maxHeight - BOARD_PADDING * 2) / ROWS
+    ));
+
+    if (size < 12) size = 12;
+
+    CELL_SIZE = size;
+    BOARD_WIDTH = COLS * CELL_SIZE;
+    BOARD_HEIGHT = ROWS * CELL_SIZE;
+
+    canvas.width = BOARD_WIDTH + BOARD_PADDING * 2;
+    canvas.height = BOARD_HEIGHT + BOARD_PADDING * 2;
+
+    cueBall.radius = CELL_SIZE * 0.34;
+
+    const pr = CELL_SIZE * 0.42;
+    pockets = [
+        { id: 0, x: 0, y: 0, r: pr, targetId: 5 },
+        { id: 1, x: BOARD_WIDTH, y: 0, r: pr, targetId: 4 },
+        { id: 2, x: 0, y: BOARD_HEIGHT / 2, r: pr, targetId: 3 },
+        { id: 3, x: BOARD_WIDTH, y: BOARD_HEIGHT / 2, r: pr, targetId: 2 },
+        { id: 4, x: 0, y: BOARD_HEIGHT, r: pr, targetId: 1 },
+        { id: 5, x: BOARD_WIDTH, y: BOARD_HEIGHT, r: pr, targetId: 0 }
+    ];
+}
+
+function initGame() {
+    score = 0;
+    movesLeft = START_MOVES;
+    linesCleared = 0;
+    gameOver = false;
+    gameWon = false;
+    queueIndex = 0;
+    shapes = [];
+    particles = [];
+    animators = [];
+
+    grid = [];
+    for (let x = 0; x < COLS; x++) {
+        grid[x] = [];
+        for (let y = 0; y < ROWS; y++) grid[x][y] = null;
+    }
+
+    resizeCanvas();
+    spawnInitialShapes();
+
+    cueBall.x = BOARD_WIDTH / 2;
+    cueBall.y = BOARD_HEIGHT - CELL_SIZE * 2.5;
+    cueBall.vx = 0;
+    cueBall.vy = 0;
+    cueBall.isMoving = false;
+
+    updateUI();
+}
+
+function spawnInitialShapes() {
+    let s1 = new Shape('T', Math.floor(COLS / 2), Math.floor(ROWS * 0.22));
+    let s2 = new Shape('O', Math.floor(COLS * 0.2), Math.floor(ROWS * 0.45));
+    let s3 = new Shape('I', Math.floor(COLS * 0.75), Math.floor(ROWS * 0.38));
+
+    [s1, s2, s3].forEach(s => {
+        if (canPlaceShape(s, s.cx, s.cy, s.blocks)) {
+            shapes.push(s);
+            refillGrid();
+        }
+    });
+}
+
+function validateCueBallPlacement() {
+    let cellX = Math.floor(cueBall.x / CELL_SIZE);
+    let cellY = Math.floor(cueBall.y / CELL_SIZE);
+
+    if (cellX >= 0 && cellX < COLS && cellY >= 0 && cellY < ROWS && grid[cellX][cellY]) {
+        for (let offset = 1; offset < 6; offset++) {
+            const checks = [
+                [0, offset], [0, -offset],
+                [offset, 0], [-offset, 0],
+                [offset, offset], [-offset, -offset]
+            ];
+
+            for (let c of checks) {
+                let tx = cellX + c[0];
+                let ty = cellY + c[1];
+
+                if (tx >= 0 && tx < COLS && ty >= 0 && ty < ROWS && !grid[tx][ty]) {
+                    cueBall.x = (tx + 0.5) * CELL_SIZE;
+                    cueBall.y = (ty + 0.5) * CELL_SIZE;
+                    return;
+                }
+            }
+        }
+    }
+}
+
+function refillGrid() {
+    for (let x = 0; x < COLS; x++) {
+        for (let y = 0; y < ROWS; y++) grid[x][y] = null;
+    }
+
+    shapes.forEach(s => {
+        s.getGridBlocks().forEach(b => {
+            if (b.x >= 0 && b.x < COLS && b.y >= 0 && b.y < ROWS) {
+                grid[b.x][b.y] = s;
+            }
+        });
+    });
+}
+
+function canPlaceShape(shape, cx, cy, blocks) {
+    const pts = blocks.map(b => ({ x: cx + b[0], y: cy + b[1] }));
+
+    for (let p of pts) {
+        if (p.x < 0 || p.x >= COLS || p.y < 0 || p.y >= ROWS) return false;
+        if (grid[p.x][p.y] && grid[p.x][p.y] !== shape) return false;
+    }
+
+    return true;
+}
+
+function getShotVector() {
+    if (!touchStart || !touchCurrent) return null;
+
+    let dx = touchCurrent.x - touchStart.x;
+    let dy = touchCurrent.y - touchStart.y;
+    let dist = Math.sqrt(dx * dx + dy * dy);
+
+    let canceled = dist < CANCEL_RADIUS;
+    let angle = Math.atan2(dy, dx) + Math.PI;
+
+    let maxPull = 150;
+    let effectiveDist = Math.min(dist, maxPull);
+    let power = effectiveDist / maxPull;
+    let maxSpeed = 36;
+    let speed = power * maxSpeed;
+
+    return {
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        speed: speed,
+        canceled: canceled,
+        power: power
+    };
+}
+
+function computeTrajectory() {
+    const shot = getShotVector();
+    if (!shot || shot.speed < 0.5) {
+        return { path: [], hitResult: null, shot: shot || { canceled: true } };
+    }
+
+    let path = [];
+    let curX = cueBall.x;
+    let curY = cueBall.y;
+    let vx = shot.vx;
+    let vy = shot.vy;
+
+    let frict = 0.982;
+    let steps = 400;
+
+    path.push({ x: curX, y: curY });
+    let hitResult = null;
+
+    for (let i = 0; i < steps; i++) {
+        curX += vx;
+        curY += vy;
+        vx *= frict;
+        vy *= frict;
+
+        let speed = Math.sqrt(vx * vx + vy * vy);
+        if (speed < 0.15) break;
+
+        let ported = false;
+
+        for (let pocket of pockets) {
+            let pdx = curX - pocket.x;
+            let pdy = curY - pocket.y;
+
+            if (pdx * pdx + pdy * pdy < pocket.r * pocket.r) {
+                let target = pockets[pocket.targetId];
+                let ox = curX - pocket.x;
+                let oy = curY - pocket.y;
+
+                curX = target.x - ox;
+                curY = target.y - oy;
+
+                path.push({ x: NaN, y: NaN });
+                path.push({ x: curX, y: curY });
+                ported = true;
+                break;
+            }
+        }
+
+        if (!ported) {
+            if (curX < cueBall.radius) {
+                curX = cueBall.radius;
+                vx = -vx;
+            } else if (curX > BOARD_WIDTH - cueBall.radius) {
+                curX = BOARD_WIDTH - cueBall.radius;
+                vx = -vx;
+            }
+
+            if (curY < cueBall.radius) {
+                curY = cueBall.radius;
+                vy = -vy;
+            } else if (curY > BOARD_HEIGHT - cueBall.radius) {
+                curY = BOARD_HEIGHT - cueBall.radius;
+                vy = -vy;
+            }
+        }
+
+        let cellX = Math.floor(curX / CELL_SIZE);
+        let cellY = Math.floor(curY / CELL_SIZE);
+
+        if (cellX >= 0 && cellX < COLS && cellY >= 0 && cellY < ROWS) {
+            let hitShape = grid[cellX][cellY];
+
+            if (hitShape) {
+                path.push({ x: curX, y: curY });
+                hitResult = {
+                    shape: hitShape,
+                    hitCellX: cellX,
+                    hitCellY: cellY,
+                    ballVx: vx,
+                    ballVy: vy,
+                    speedAtHit: speed
+                };
+                break;
+            }
+        }
+
+        if (i % 3 === 0) path.push({ x: curX, y: curY });
+    }
+
+    return { path, hitResult, shot };
+}
+
+function predictResolution(hit) {
+    if (!hit) return null;
+
+    const shape = hit.shape;
+    let dirX = 0;
+    let dirY = 0;
+    let ratio = Math.abs(hit.ballVx) / (Math.abs(hit.ballVy) + 0.001);
+
+    if (ratio > 0.4 && ratio < 2.5) {
+        dirX = hit.ballVx > 0 ? 1 : -1;
+        dirY = hit.ballVy > 0 ? 1 : -1;
+    } else if (Math.abs(hit.ballVx) > Math.abs(hit.ballVy)) {
+        dirX = hit.ballVx > 0 ? 1 : -1;
+    } else {
+        dirY = hit.ballVy > 0 ? 1 : -1;
+    }
+
+    let pushDist = Math.max(1, Math.min(4, Math.floor(hit.speedAtHit / 3)));
+    let willRotate = false;
+    let rotSign = 1;
+
+    let hitWorldCX = (shape.cx + 0.5) * CELL_SIZE;
+    let hitWorldCY = (shape.cy + 0.5) * CELL_SIZE;
+
+    let crossProduct =
+        (hit.hitCellX * CELL_SIZE + CELL_SIZE / 2 - hitWorldCX) * hit.ballVy -
+        (hit.hitCellY * CELL_SIZE + CELL_SIZE / 2 - hitWorldCY) * hit.ballVx;
+
+    if (Math.abs(crossProduct) > CELL_SIZE * 4) {
+        willRotate = true;
+        rotSign = crossProduct > 0 ? 1 : -1;
+    }
+
+    let finalCx = shape.cx;
+    let finalCy = shape.cy;
+    let currentBlocks = shape.blocks.map(b => [...b]);
+
+    for (let d = 0; d < pushDist; d++) {
+        let nextCx = finalCx + dirX;
+        let nextCy = finalCy + dirY;
+
+        if (canPlaceShape(shape, nextCx, nextCy, currentBlocks)) {
+            finalCx = nextCx;
+            finalCy = nextCy;
+        } else {
+            break;
+        }
+    }
+
+    let finalBlocks = currentBlocks;
+    let rotatedSuccessfully = false;
+
+    if (willRotate && shape.type !== 'O') {
+        let testBlocks = shape.getRotatedBlocks(rotSign);
+        const kicks = [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]];
+
+        for (let k of kicks) {
+            if (canPlaceShape(shape, finalCx + k[0], finalCy + k[1], testBlocks)) {
+                finalCx += k[0];
+                finalCy += k[1];
+                finalBlocks = testBlocks;
+                rotatedSuccessfully = true;
+                break;
+            }
+        }
+    }
+
+    return {
+        shape: shape,
+        cx: finalCx,
+        cy: finalCy,
+        blocks: finalBlocks,
+        rotated: rotatedSuccessfully,
+        rotSign: rotSign,
+        dirX: dirX,
+        dirY: dirY
+    };
+}
+
+function processTurnPhysics(hitInfo) {
+    if (!hitInfo) return;
+
+    const prediction = predictResolution(hitInfo);
+    if (!prediction) return;
+
+    createImpactFX(hitInfo.hitCellX, hitInfo.hitCellY, prediction.shape.color);
+
+    let targetShape = prediction.shape;
+    targetShape.scaleX = 0.85;
+    targetShape.scaleY = 0.85;
+
+    animateShapeTo(
+        targetShape,
+        prediction.cx,
+        prediction.cy,
+        prediction.blocks,
+        () => {
+            checkChainReaction(prediction);
+        }
+    );
+}
+
+function animateShapeTo(shape, targetCx, targetCy, targetBlocks, callback) {
+    let anim = {
+        shape: shape,
+        fromX: shape.visualX,
+        fromY: shape.visualY,
+        toX: targetCx,
+        toY: targetCy,
+        progress: 0,
+        speed: 0.12,
+        update: function () {
+            this.progress += this.speed;
+
+if (this.progress >= 1) {
+    this.progress = 1;
+    shape.visualX = this.toX;
+    shape.visualY = this.toY;
+    shape.cx = targetCx;
+    shape.cy = targetCy;
+    shape.blocks = targetBlocks.map(b => [...b]);
+    shape.scaleX = 1;
+    shape.scaleY = 1;
+    refillGrid();
+    clearAllFullLines();
+    refillGrid();
+    return true;
+}
+
+            shape.visualX = this.fromX + (this.toX - this.fromX) * this.progress;
+            shape.visualY = this.fromY + (this.toY - this.fromY) * this.progress;
+            shape.scaleX += (1 - shape.scaleX) * 0.1;
+            shape.scaleY += (1 - shape.scaleY) * 0.1;
+
+            return false;
+        },
+        done: callback
+    };
+
+    animators.push(anim);
+}
+
+function checkChainReaction(prevPrediction) {
+    let currentBlocks = prevPrediction.shape.getGridBlocks();
+    let neighborsFound = [];
+
+    for (let b of currentBlocks) {
+        const dirs = [
+            [-1, 0], [1, 0], [0, -1], [0, 1],
+            [-1, -1], [-1, 1], [1, -1], [1, 1]
+        ];
+
+        for (let d of dirs) {
+            let nx = b.x + d[0];
+            let ny = b.y + d[1];
+
+            if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) {
+                let neighbor = grid[nx][ny];
+
+                if (
+                    neighbor &&
+                    neighbor !== prevPrediction.shape &&
+                    !neighborsFound.some(n => n.shape === neighbor)
+                ) {
+                    if (
+                        (d[0] === prevPrediction.dirX || prevPrediction.dirX === 0) &&
+                        (d[1] === prevPrediction.dirY || prevPrediction.dirY === 0)
+                    ) {
+                        neighborsFound.push({
+                            shape: neighbor,
+                            dx: d[0],
+                            dy: d[1],
+                            hitX: nx,
+                            hitY: ny
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    neighborsFound.forEach(n => {
+        setTimeout(() => {
+            if (gameOver) return;
+
+            let nextCx = n.shape.cx + n.dx;
+            let nextCy = n.shape.cy + n.dy;
+
+            if (canPlaceShape(n.shape, nextCx, nextCy, n.shape.blocks)) {
+                createMiniImpactFX(n.hitX, n.hitY, n.shape.color);
+
+                animateShapeTo(n.shape, nextCx, nextCy, n.shape.blocks, () => {
+                    checkChainReaction({
+                        shape: n.shape,
+                        dirX: n.dx,
+                        dirY: n.dy
+                    });
+                });
+            }
+        }, 80);
+    });
+}
+
+function findFullLines() {
+    refillGrid();
+
+    let rows = [];
+    let cols = [];
+
+    for (let y = 0; y < ROWS; y++) {
+        let full = true;
+
+        for (let x = 0; x < COLS; x++) {
+            if (!grid[x][y]) {
+                full = false;
+                break;
+            }
+        }
+
+        if (full) rows.push(y);
+    }
+
+    for (let x = 0; x < COLS; x++) {
+        let full = true;
+
+        for (let y = 0; y < ROWS; y++) {
+            if (!grid[x][y]) {
+                full = false;
+                break;
+            }
+        }
+
+        if (full) cols.push(x);
+    }
+
+    return { rows, cols };
+}
+
+function removeBlocksInLines(rows, cols) {
+    shapes.forEach(s => {
+        s.blocks = s.blocks.filter(b => {
+            let wx = s.cx + b[0];
+            let wy = s.cy + b[1];
+            return !rows.includes(wy) && !cols.includes(wx);
+        });
+    });
+
+    shapes = shapes.filter(s => s.blocks.length > 0);
+}
+
+function applyGravity(clearedRows) {
+    if (clearedRows.length === 0) return;
+
+    let sortedRows = [...clearedRows].sort((a, b) => b - a);
+
+    sortedRows.forEach(rowY => {
+        shapes.forEach(s => {
+            s.blocks.forEach(b => {
+                let wy = s.cy + b[1];
+                if (wy < rowY) b[1] += 1;
+            });
+        });
+    });
+
+    shapes.forEach(s => {
+        s.visualY = s.cy;
+        s.visualX = s.cx;
+    });
+}
+
+function clearAllFullLines() {
+    let safety = 10;
+
+    while (safety-- > 0) {
+        const { rows, cols } = findFullLines();
+        const clearedCount = rows.length + cols.length;
+
+        if (clearedCount === 0) break;
+
+        let reward = clearedCount === 1 ? 100 : clearedCount * 150;
+        score += reward;
+        linesCleared += clearedCount;
+
+        triggerLineClearFX(rows, cols);
+        removeBlocksInLines(rows, cols);
+        applyGravity(rows);
+        refillGrid();
+    }
+}
+
+function endTurnChecks() {
+    movesLeft--;
+
+    if (!gameOver && movesLeft > 0) {
+        spawnNextQueueShape();
+    }
+
+    refillGrid();
+    clearAllFullLines();
+    refillGrid();
+
+    if (linesCleared >= TARGET_LINES) {
+        gameWon = true;
+        gameOver = true;
+    } else if (movesLeft <= 0) {
+        gameOver = true;
+    }
+
+    validateCueBallPlacement();
+    updateUI();
+}
+
+function spawnNextQueueShape() {
+    let nextType = SPAWN_QUEUE[queueIndex % SPAWN_QUEUE.length];
+    queueIndex++;
+
+    for (let r = 1; r <= Math.floor(ROWS / 3); r++) {
+        for (let c = 2; c < COLS - 2; c++) {
+            let testShape = new Shape(nextType, c, r);
+
+            if (canPlaceShape(testShape, testShape.cx, testShape.cy, testShape.blocks)) {
+                shapes.push(testShape);
+                refillGrid();
+                return;
+            }
+        }
+    }
+}
+
+function createImpactFX(cellX, cellY, color) {
+    let wx = (cellX + 0.5) * CELL_SIZE;
+    let wy = (cellY + 0.5) * CELL_SIZE;
+    let pCount = 4 + Math.floor(Math.random() * 3);
+
+    for (let i = 0; i < pCount; i++) {
+        particles.push({
+            x: wx,
+            y: wy,
+            vx: (Math.random() - 0.5) * 6,
+            vy: (Math.random() - 0.5) * 6,
+            radius: Math.random() * 3 + 2,
+            color: color,
+            alpha: 1,
+            life: 1
+        });
+    }
+}
+
+function createMiniImpactFX(cellX, cellY, color) {
+    let wx = (cellX + 0.5) * CELL_SIZE;
+    let wy = (cellY + 0.5) * CELL_SIZE;
+
+    for (let i = 0; i < 3; i++) {
+        particles.push({
+            x: wx,
+            y: wy,
+            vx: (Math.random() - 0.5) * 3,
+            vy: (Math.random() - 0.5) * 3,
+            radius: Math.random() * 2 + 1,
+            color: color,
+            alpha: 1,
+            life: 0.6
+        });
+    }
+}
+
+function createWallSparkFX(x, y, color = 'rgba(255,255,255,0.6)') {
+    let count = 2 + Math.floor(Math.random() * 3);
+
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 5,
+            vy: (Math.random() - 0.5) * 5,
+            radius: Math.random() * 2 + 1,
+            color: color,
+            alpha: 0.9,
+            life: 0.5
+        });
+    }
+}
+
+function triggerLineClearFX(rows, cols) {
+    rows.forEach(y => {
+        for (let x = 0; x < COLS; x++) createImpactFX(x, y, '#ffffff');
+    });
+
+    cols.forEach(x => {
+        for (let y = 0; y < ROWS; y++) createImpactFX(x, y, '#ffffff');
+    });
+}
+
+function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.04;
+        p.alpha = Math.max(0, p.life);
+
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+}
+
+function updateCueBallPhysics() {
+    if (!cueBall.isMoving) return;
+
+    let frict = 0.982;
+    cueBall.x += cueBall.vx;
+    cueBall.y += cueBall.vy;
+    cueBall.vx *= frict;
+    cueBall.vy *= frict;
+
+    for (let pocket of pockets) {
+        let pdx = cueBall.x - pocket.x;
+        let pdy = cueBall.y - pocket.y;
+
+        if (pdx * pdx + pdy * pdy < pocket.r * pocket.r) {
+            let target = pockets[pocket.targetId];
+            let offsetX = cueBall.x - pocket.x;
+            let offsetY = cueBall.y - pocket.y;
+
+            cueBall.x = target.x - offsetX;
+            cueBall.y = target.y - offsetY;
+
+            createWallSparkFX(pocket.x, pocket.y, 'rgba(53, 231, 255, 0.9)');
+            createWallSparkFX(cueBall.x, cueBall.y, 'rgba(53, 231, 255, 0.9)');
+            return;
+        }
+    }
+
+    if (cueBall.x < cueBall.radius) {
+        cueBall.x = cueBall.radius;
+        cueBall.vx = -cueBall.vx;
+        createWallSparkFX(0, cueBall.y);
+    } else if (cueBall.x > BOARD_WIDTH - cueBall.radius) {
+        cueBall.x = BOARD_WIDTH - cueBall.radius;
+        cueBall.vx = -cueBall.vx;
+        createWallSparkFX(BOARD_WIDTH, cueBall.y);
+    }
+
+    if (cueBall.y < cueBall.radius) {
+        cueBall.y = cueBall.radius;
+        cueBall.vy = -cueBall.vy;
+        createWallSparkFX(cueBall.x, 0);
+    } else if (cueBall.y > BOARD_HEIGHT - cueBall.radius) {
+        cueBall.y = BOARD_HEIGHT - cueBall.radius;
+        cueBall.vy = -cueBall.vy;
+        createWallSparkFX(cueBall.x, BOARD_HEIGHT);
+    }
+
+    let cellX = Math.floor(cueBall.x / CELL_SIZE);
+    let cellY = Math.floor(cueBall.y / CELL_SIZE);
+
+    if (cellX >= 0 && cellX < COLS && cellY >= 0 && cellY < ROWS) {
+        let hitShape = grid[cellX][cellY];
+
+        if (hitShape) {
+            let hitInfo = {
+                shape: hitShape,
+                hitCellX: cellX,
+                hitCellY: cellY,
+                ballVx: cueBall.vx,
+                ballVy: cueBall.vy,
+                speedAtHit: Math.sqrt(cueBall.vx * cueBall.vx + cueBall.vy * cueBall.vy)
+            };
+
+            cueBall.isMoving = false;
+            processTurnPhysics(hitInfo);
+            setTimeout(() => {
+                endTurnChecks();
+            }, 400);
+
+            return;
+        }
+    }
+
+    let totalSpeed = Math.sqrt(cueBall.vx * cueBall.vx + cueBall.vy * cueBall.vy);
+
+    if (totalSpeed < 0.15) {
+        cueBall.isMoving = false;
+        endTurnChecks();
+    }
+}
+
+function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+
+function drawGlossyBlock(wx, wy, size, color, alpha = 1) {
+    const pad = Math.max(1, size * 0.07);
+    const x = wx + pad;
+    const y = wy + pad;
+    const w = size - pad * 2;
+    const h = size - pad * 2;
+    const r = Math.max(3, size * 0.2);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    ctx.shadowColor = color;
+    ctx.shadowBlur = size * 0.28;
+
+    const body = ctx.createLinearGradient(x, y, x, y + h);
+    body.addColorStop(0, '#ffffff');
+    body.addColorStop(0.16, color);
+    body.addColorStop(0.74, color);
+    body.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+
+    ctx.fillStyle = body;
+    roundRect(x, y, w, h, r);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = Math.max(1, size * 0.03);
+    roundRect(x + ctx.lineWidth * 0.5, y + ctx.lineWidth * 0.5, w - ctx.lineWidth, h - ctx.lineWidth, r);
+    ctx.stroke();
+
+    const gloss = ctx.createLinearGradient(x, y, x, y + h * 0.55);
+    gloss.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+    gloss.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    ctx.fillStyle = gloss;
+    roundRect(x + w * 0.14, y + h * 0.1, w * 0.72, h * 0.34, r * 0.7);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function drawGlossyBall(x, y, radius) {
+    ctx.save();
+
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = radius * 0.8;
+    ctx.shadowOffsetY = radius * 0.22;
+
+    const base = ctx.createRadialGradient(
+        x - radius * 0.3,
+        y - radius * 0.36,
+        radius * 0.1,
+        x,
+        y,
+        radius
+    );
+
+    base.addColorStop(0, '#ffffff');
+    base.addColorStop(0.45, '#eafcff');
+    base.addColorStop(0.82, '#b8d8e3');
+    base.addColorStop(1, '#5e7c8b');
+
+    ctx.fillStyle = base;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    const gloss = ctx.createRadialGradient(
+        x - radius * 0.33,
+        y - radius * 0.4,
+        0,
+        x - radius * 0.26,
+        y - radius * 0.32,
+        radius * 0.62
+    );
+
+    gloss.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+    gloss.addColorStop(0.45, 'rgba(255, 255, 255, 0.32)');
+    gloss.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    ctx.fillStyle = gloss;
+    ctx.beginPath();
+    ctx.ellipse(
+        x - radius * 0.24,
+        y - radius * 0.3,
+        radius * 0.44,
+        radius * 0.3,
+        -0.55,
+        0,
+        Math.PI * 2
+    );
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function drawPocket(p) {
+    ctx.save();
+
+    ctx.fillStyle = '#041018';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(53, 231, 255, 0.4)';
+    ctx.lineWidth = Math.max(1.5, p.r * 0.12);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r - ctx.lineWidth * 0.5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(53, 231, 255, 0.14)';
+    ctx.beginPath();
+    ctx.arc(p.x - p.r * 0.18, p.y - p.r * 0.22, p.r * 0.42, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.translate(BOARD_PADDING, BOARD_PADDING);
+
+    ctx.strokeStyle = 'rgba(105, 232, 255, 0.055)';
+    ctx.lineWidth = 1;
+
+    for (let x = 0; x <= COLS; x++) {
+        ctx.beginPath();
+        ctx.moveTo(x * CELL_SIZE, 0);
+        ctx.lineTo(x * CELL_SIZE, BOARD_HEIGHT);
+        ctx.stroke();
+    }
+
+    for (let y = 0; y <= ROWS; y++) {
+        ctx.beginPath();
+        ctx.moveTo(0, y * CELL_SIZE);
+        ctx.lineTo(BOARD_WIDTH, y * CELL_SIZE);
+        ctx.stroke();
+    }
+
+    pockets.forEach(drawPocket);
+
+    let trajData = null;
+    if (isDragging && !cueBall.isMoving && !gameOver) {
+        trajData = computeTrajectory();
+    }
+
+    if (trajData && trajData.hitResult && !trajData.shot.canceled) {
+        let pred = predictResolution(trajData.hitResult);
+
+        if (pred) {
+            pred.blocks.forEach(b => {
+                let wx = (pred.cx + b[0]) * CELL_SIZE;
+                let wy = (pred.cy + b[1]) * CELL_SIZE;
+                drawGlossyBlock(wx, wy, CELL_SIZE, pred.shape.color, 0.3);
+            });
+
+            if (pred.rotated) {
+                ctx.save();
+                ctx.globalAlpha = 0.85;
+                ctx.fillStyle = '#ffffff';
+                ctx.font = `bold ${CELL_SIZE * 0.5}px Arial, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(
+                    pred.rotSign > 0 ? '↻' : '↺',
+                    (pred.cx + 0.5) * CELL_SIZE,
+                    (pred.cy + 0.5) * CELL_SIZE
+                );
+                ctx.restore();
+            }
+        }
+    }
+
+    shapes.forEach(s => {
+        s.blocks.forEach(b => {
+            let wx = (s.visualX + b[0]) * CELL_SIZE;
+            let wy = (s.visualY + b[1]) * CELL_SIZE;
+
+            if (s.scaleX !== 1 || s.scaleY !== 1) {
+                ctx.save();
+                let cx = (s.visualX + 0.5) * CELL_SIZE;
+                let cy = (s.visualY + 0.5) * CELL_SIZE;
+                ctx.translate(cx, cy);
+                ctx.scale(s.scaleX, s.scaleY);
+                ctx.translate(-cx, -cy);
+                drawGlossyBlock(wx, wy, CELL_SIZE, s.color);
+                ctx.restore();
+            } else {
+                drawGlossyBlock(wx, wy, CELL_SIZE, s.color);
+            }
+        });
+    });
+
+    if (trajData && trajData.path.length > 1) {
+        ctx.save();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = trajData.shot.canceled
+            ? 'rgba(53, 231, 255, 0.25)'
+            : 'rgba(53, 231, 255, 0.9)';
+        ctx.shadowColor = 'rgba(53, 231, 255, 0.55)';
+        ctx.shadowBlur = 7;
+        ctx.beginPath();
+
+        let first = true;
+
+        for (let k = 0; k < trajData.path.length; k++) {
+            let pt = trajData.path[k];
+
+            if (isNaN(pt.x)) {
+                ctx.stroke();
+                ctx.beginPath();
+                first = true;
+            } else {
+                if (first) {
+                    ctx.moveTo(pt.x, pt.y);
+                    first = false;
+                } else {
+                    ctx.lineTo(pt.x, pt.y);
+                }
+            }
+        }
+
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    if (isDragging && touchStart && !cueBall.isMoving && !gameOver) {
+        ctx.save();
+        let shot = getShotVector();
+
+        ctx.strokeStyle = shot && shot.canceled
+            ? 'rgba(53, 231, 255, 0.85)'
+            : 'rgba(53, 231, 255, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(touchStart.x, touchStart.y, CANCEL_RADIUS, 0, Math.PI * 2);
+        ctx.stroke();
+
+        if (touchCurrent) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+            ctx.beginPath();
+            ctx.moveTo(touchStart.x, touchStart.y);
+            ctx.lineTo(touchCurrent.x, touchCurrent.y);
+            ctx.stroke();
+
+            ctx.fillStyle = shot && shot.canceled ? '#35e7ff' : '#f3ffff';
+            ctx.beginPath();
+            ctx.arc(touchCurrent.x, touchCurrent.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    if (!gameOver) {
+        drawGlossyBall(cueBall.x, cueBall.y, cueBall.radius);
+    }
+
+    particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 5;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+
+    if (gameOver) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(3, 7, 12, 0.86)';
+        ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+        ctx.fillStyle = gameWon ? '#53ed9a' : '#ff4d69';
+        ctx.font = 'bold 26px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(
+            gameWon ? 'ПОБЕДА!' : 'ИГРА ОКОНЧЕНА',
+            BOARD_WIDTH / 2,
+            BOARD_HEIGHT / 2 - 16
+        );
+        ctx.fillStyle = '#b8dce5';
+        ctx.font = '15px Arial, sans-serif';
+        ctx.fillText(`Набрано очков: ${score}`, BOARD_WIDTH / 2, BOARD_HEIGHT / 2 + 14);
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+function updateUI() {
+    document.getElementById('score').innerText = score;
+    document.getElementById('moves').innerText = movesLeft;
+    document.getElementById('moves-hint').innerText = movesLeft;
+    document.getElementById('lines').innerText = `${linesCleared} / ${TARGET_LINES}`;
+
+    let targetText = document.getElementById('target-text');
+    let linesNeeded = Math.max(0, TARGET_LINES - linesCleared);
+
+    if (gameWon) {
+        targetText.innerText = 'цель выполнена!';
+    } else if (movesLeft <= 0) {
+        targetText.innerText = 'ходы закончились';
+    } else {
+        targetText.innerText = `${linesNeeded} ${linesNeeded === 1 ? 'линию' : 'линии'}`;
+    }
+}
+
+function getCanvasTouchPos(e) {
+    if (!e.touches || e.touches.length === 0) return null;
+    const rect = canvas.getBoundingClientRect();
+
+    return {
+        x: (e.touches[0].clientX - rect.left) * (canvas.width / rect.width) - BOARD_PADDING,
+        y: (e.touches[0].clientY - rect.top) * (canvas.height / rect.height) - BOARD_PADDING
+    };
+}
+
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (cueBall.isMoving || gameOver) return;
+
+    const pos = getCanvasTouchPos(e);
+    if (pos) {
+        touchStart = pos;
+        touchCurrent = pos;
+        isDragging = true;
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (!isDragging || gameOver) return;
+
+    const pos = getCanvasTouchPos(e);
+    if (pos) touchCurrent = pos;
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (!isDragging || gameOver) return;
+    isDragging = false;
+
+    const shot = getShotVector();
+    if (shot && !shot.canceled && shot.speed > 0.5) {
+        cueBall.vx = shot.vx;
+        cueBall.vy = shot.vy;
+        cueBall.isMoving = true;
+    }
+
+    touchStart = null;
+    touchCurrent = null;
+}, { passive: false });
+
+canvas.addEventListener('mousedown', (e) => {
+    if (cueBall.isMoving || gameOver) return;
+
+    const rect = canvas.getBoundingClientRect();
+    touchStart = {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width) - BOARD_PADDING,
+        y: (e.clientY - rect.top) * (canvas.height / rect.height) - BOARD_PADDING
+    };
+
+    touchCurrent = touchStart;
+    isDragging = true;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!isDragging || gameOver) return;
+
+    const rect = canvas.getBoundingClientRect();
+    touchCurrent = {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width) - BOARD_PADDING,
+        y: (e.clientY - rect.top) * (canvas.height / rect.height) - BOARD_PADDING
+    };
+});
+
+window.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+
+    const shot = getShotVector();
+    if (shot && !shot.canceled && shot.speed > 0.5) {
+        cueBall.vx = shot.vx;
+        cueBall.vy = shot.vy;
+        cueBall.isMoving = true;
+    }
+
+    touchStart = null;
+    touchCurrent = null;
+});
+
+document.getElementById('btn-restart').addEventListener('click', () => {
+    initGame();
+});
+
+document.getElementById('btn-settings').addEventListener('click', () => {
+    document.getElementById('setting-moves').value = START_MOVES;
+    document.getElementById('setting-lines').value = TARGET_LINES;
+    document.getElementById('setting-cols').value = COLS;
+    document.getElementById('setting-rows').value = ROWS;
+    document.getElementById('settings-overlay').classList.add('open');
+});
+
+document.getElementById('settings-cancel').addEventListener('click', () => {
+    document.getElementById('settings-overlay').classList.remove('open');
+});
+
+document.getElementById('settings-apply').addEventListener('click', () => {
+    const moves = parseInt(document.getElementById('setting-moves').value, 10);
+    const lines = parseInt(document.getElementById('setting-lines').value, 10);
+    const cols = parseInt(document.getElementById('setting-cols').value, 10);
+    const rows = parseInt(document.getElementById('setting-rows').value, 10);
+
+    START_MOVES = Math.min(30, Math.max(5, isNaN(moves) ? 12 : moves));
+    TARGET_LINES = Math.min(5, Math.max(1, isNaN(lines) ? 2 : lines));
+    COLS = Math.min(14, Math.max(6, isNaN(cols) ? 10 : cols));
+    ROWS = Math.min(24, Math.max(12, isNaN(rows) ? 18 : rows));
+
+    document.getElementById('settings-overlay').classList.remove('open');
+    initGame();
+});
+
+window.addEventListener('resize', () => {
+    resizeCanvas();
+    refillGrid();
+});
+
+function gameLoop() {
+    updateCueBallPhysics();
+
+    for (let i = animators.length - 1; i >= 0; i--) {
+        if (animators[i].update()) {
+            if (animators[i].done) animators[i].done();
+            animators.splice(i, 1);
+        }
+    }
+
+    updateParticles();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+initGame();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
