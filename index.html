@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#050b11">
+    <title>CUETRIS — бильярд + тетрис</title>
+
+    <style>
+        :root {
+            --bg: #050b11;
+            --accent: #35e7ff;
+            --accent-soft: rgba(53, 231, 255, 0.25);
+            --text: #eafcff;
+            --muted: #8ab7c4;
+            --gold: #ffd257;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 12%, #123a52 0%, #07131d 42%, #02060a 100%);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        body {
+            position: fixed;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            width: 100vw;
+            height: 100dvh;
+            padding:
+                max(14px, env(safe-area-inset-top))
+                16px
+                max(10px, env(safe-area-inset-bottom))
+                16px;
+        }
+
+        #background {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        #content {
+            position: relative;
+            z-index: 2;
+            width: min(100%, 430px);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 22px;
+            text-align: center;
+        }
+
+        #logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .logo-letter {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: clamp(38px, 11vw, 54px);
+            height: clamp(38px, 11vw, 54px);
+            border-radius: 12px;
+            font-size: clamp(22px, 7vw, 32px);
+            font-weight: 900;
+            color: #041018;
+            box-shadow:
+                inset 0 2px 0 rgba(255, 255, 255, 0.55),
+                inset 0 -4px 8px rgba(0, 0, 0, 0.35),
+                0 6px 18px rgba(0, 0, 0, 0.45);
+            animation: blockFloat 3.4s ease-in-out infinite;
+        }
+
+        .letter-c { background: linear-gradient(160deg, #8ff6ff, #22c8e8); animation-delay: 0s; }
+        .letter-u { background: linear-gradient(160deg, #ffc98a, #ff8a34); animation-delay: 0.18s; }
+        .letter-e { background: linear-gradient(160deg, #dcb6ff, #a45cff); animation-delay: 0.36s; }
+        .letter-t { background: linear-gradient(160deg, #ff9dbd, #ff4d86); animation-delay: 0.54s; }
+        .letter-r { background: linear-gradient(160deg, #ffe08a, #ffb020); animation-delay: 0.72s; }
+        .letter-i { background: linear-gradient(160deg, #9dffc8, #2ee27f); animation-delay: 0.9s; }
+        .letter-s { background: linear-gradient(160deg, #9ad4ff, #2f8dff); animation-delay: 1.08s; }
+
+        @keyframes blockFloat {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-7px) rotate(-2deg);
+            }
+        }
+
+        #subtitle {
+            font-size: clamp(12px, 3.4vw, 15px);
+            line-height: 1.45;
+            color: var(--muted);
+            max-width: 320px;
+        }
+
+        #subtitle b {
+            color: var(--accent);
+        }
+
+        #play-button {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-width: 210px;
+            padding: 15px 26px;
+            border: 2px solid rgba(53, 231, 255, 0.75);
+            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(19, 66, 84, 0.95), rgba(5, 18, 26, 0.98));
+            color: #eafcff;
+            font-size: 17px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-decoration: none;
+            box-shadow:
+                0 0 22px rgba(53, 231, 255, 0.22),
+                inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        #play-button::before {
+            content: "";
+            position: absolute;
+            inset: 4px;
+            border-radius: 12px;
+            border: 1px solid rgba(53, 231, 255, 0.18);
+            pointer-events: none;
+        }
+
+        #play-button:active {
+            transform: scale(0.96);
+            background: rgba(35, 215, 255, 0.18);
+            box-shadow:
+                0 0 28px rgba(53, 231, 255, 0.35),
+                inset 0 0 18px rgba(53, 231, 255, 0.16);
+        }
+
+        .button-ball {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 32% 28%, #ffffff 0%, #dff6ff 38%, #9fc4d1 78%, #54707d 100%);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
+        }
+
+        #features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 7px;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .feature {
+            border: 1px solid rgba(105, 232, 255, 0.22);
+            border-radius: 12px;
+            background: rgba(5, 18, 26, 0.72);
+            padding: 10px 6px;
+            font-size: 10px;
+            line-height: 1.25;
+            color: #b8dce5;
+        }
+
+        .feature-icon {
+            font-size: 17px;
+            margin-bottom: 4px;
+        }
+
+        #footer {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            text-align: center;
+            font-size: 11px;
+            letter-spacing: 1.4px;
+            color: #7fa5b1;
+            text-transform: lowercase;
+        }
+
+        #footer b {
+            color: #c8eef7;
+            font-weight: 700;
+        }
+
+        @media (max-height: 620px) {
+            #content {
+                gap: 14px;
+            }
+
+            #subtitle {
+                font-size: 11px;
+            }
+
+            #play-button {
+                padding: 12px 20px;
+                font-size: 15px;
+            }
+
+            .feature {
+                padding: 7px 5px;
+                font-size: 9px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="background"></canvas>
+
+    <div id="content">
+        <div id="logo">
+            <span class="logo-letter letter-c">C</span>
+            <span class="logo-letter letter-u">U</span>
+            <span class="logo-letter letter-e">E</span>
+            <span class="logo-letter letter-t">T</span>
+            <span class="logo-letter letter-r">R</span>
+            <span class="logo-letter letter-i">I</span>
+            <span class="logo-letter letter-s">S</span>
+        </div>
+
+        <div id="subtitle">
+            Бильярдный шар, тетрис-фигуры, порталы и цепные удары.<br>
+            Собирай <b>линии</b> за ограниченное число ходов.
+        </div>
+
+        <a id="play-button" href="game.html">
+            <span class="button-ball"></span>
+            играть
+        </a>
+
+        <div id="features">
+            <div class="feature">
+                <div class="feature-icon">🎱</div>
+                удар шаром
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🧩</div>
+                фигуры
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🌀</div>
+                порталы
+            </div>
+        </div>
+    </div>
+
+    <div id="footer">
+        <b>artiomyo games</b>
+    </div>
+
+<script>
+    const canvas = document.getElementById('background');
+    const ctx = canvas.getContext('2d');
+
+    let particles = [];
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+
+    function createParticles() {
+        particles = [];
+
+        for (let i = 0; i < 26; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 5 + 3,
+                speed: Math.random() * 0.25 + 0.08,
+                color: ['#35e7ff', '#ff5aa8', '#b26cff', '#ff9d45', '#53ed9a'][Math.floor(Math.random() * 5)],
+                angle: Math.random() * Math.PI * 2
+            });
+        }
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        particles.forEach(p => {
+            p.y -= p.speed;
+            p.angle += 0.004;
+
+            if (p.y < -20) {
+                p.y = canvas.height + 20;
+                p.x = Math.random() * canvas.width;
+            }
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.angle);
+            ctx.globalAlpha = 0.22;
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 14;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+            ctx.restore();
+        });
+
+        requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', () => {
+        resize();
+        createParticles();
+    });
+
+    resize();
+    createParticles();
+    draw();
+</script>
+
+</body>
+</html>
